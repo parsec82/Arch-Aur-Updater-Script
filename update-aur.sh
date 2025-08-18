@@ -70,10 +70,13 @@ GITHUB_REPO="parsec82/Arch-Aur-Updater-Script"
 GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
 LATEST_VERSION=""
 if command -v curl >/dev/null 2>&1; then
-    LATEST_VERSION=$(curl -fsSL "$GITHUB_API" | jq -r .tag_name 2>/dev/null | sed 's/^v//')
-    if [ -n "$LATEST_VERSION" ] && [ "$LATEST_VERSION" != "null" ] && [ "$LATEST_VERSION" != "$SCRIPT_VERSION" ]; then
-        echo -e "\033[1;33m\n⚠️  È disponibile una nuova versione dello script: $LATEST_VERSION (tu stai usando $SCRIPT_VERSION)\033[0m"
-        notify "AUR Updater" "Nuova versione script disponibile: $LATEST_VERSION (tu: $SCRIPT_VERSION)"
+    GITHUB_JSON=$(curl -fsSL "$GITHUB_API" 2>/dev/null || true)
+    if [ -n "$GITHUB_JSON" ]; then
+        LATEST_VERSION=$(echo "$GITHUB_JSON" | jq -r .tag_name 2>/dev/null | sed 's/^v//')
+        if [ -n "$LATEST_VERSION" ] && [ "$LATEST_VERSION" != "null" ] && [ "$LATEST_VERSION" != "$SCRIPT_VERSION" ]; then
+            echo -e "\033[1;33m\n⚠️  È disponibile una nuova versione dello script: $LATEST_VERSION (tu stai usando $SCRIPT_VERSION)\033[0m"
+            notify "AUR Updater" "Nuova versione script disponibile: $LATEST_VERSION (tu: $SCRIPT_VERSION)"
+        fi
     fi
 fi
 
