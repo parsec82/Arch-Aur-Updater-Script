@@ -11,33 +11,42 @@ notify() {
 }
 
 
-# Parsing flag --check, --all, --help/-h
+
+# Parsing flag --check, --all, --help/-h, --no-color
 CHECK_ONLY=0
 ALL_UPDATE=0
 SHOW_HELP=0
+NO_COLOR=0
 for arg in "$@"; do
-        if [[ "$arg" == "--check" ]]; then
-                CHECK_ONLY=1
-        fi
-        if [[ "$arg" == "--all" ]]; then
-                ALL_UPDATE=1
-        fi
-        if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
-                SHOW_HELP=1
-        fi
+    case "$arg" in
+        --check)
+            CHECK_ONLY=1
+            ;;
+        --all)
+            ALL_UPDATE=1
+            ;;
+        --help|-h)
+            SHOW_HELP=1
+            ;;
+        --no-color)
+            NO_COLOR=1
+            ;;
+    esac
 done
+
 
 if [ "$SHOW_HELP" = "1" ]; then
     cat <<EOF
 AUR package update script without yay/paru (v$SCRIPT_VERSION)
 -------------------------------------------------------------
 USAGE:
-    ./update-aur.sh [--check] [--all] [--help]
+    ./update-aur.sh [--check] [--all] [--no-color] [--help]
 
 OPTIONS:
-    --check     Show only the status of AUR packages (upgradable, orphaned, out-of-date, removed, missing dependencies) without update prompt.
-    --all       Update all upgradable AUR packages without interactive prompt.
-    --help, -h  Show this help and exit.
+    --check      Show only the status of AUR packages (upgradable, orphaned, out-of-date, removed, missing dependencies) without update prompt.
+    --all        Update all upgradable AUR packages without interactive prompt.
+    --no-color   Disable colored output.
+    --help, -h   Show this help and exit.
 
 FEATURES:
     - Ignores *debug* packages and those listed in ~/.aurignore
@@ -53,7 +62,7 @@ FILE ~/.aurignore:
 EXAMPLES:
     ./update-aur.sh --check
     ./update-aur.sh --all
-    ./update-aur.sh
+    ./update-aur.sh --no-color
 EOF
     exit 0
 fi
@@ -61,6 +70,7 @@ fi
 #!/bin/bash
 # Script per controllare e aggiornare pacchetti AUR senza yay/paru
 # Richiede: curl, jq, git, makepkg, pacman
+
 
 # === VERSIONE SCRIPT ===
 SCRIPT_VERSION="3.1"
@@ -81,7 +91,15 @@ if command -v curl >/dev/null 2>&1; then
 fi
 
 
+
 set -e
+
+# Colori (disabilitabili)
+if [ "$NO_COLOR" = "1" ]; then
+    NC=""; BOLD=""; YELLOW=""; RED=""; GREEN=""; CYAN=""; MAGENTA="";
+else
+    NC="\033[0m"; BOLD="\033[1m"; YELLOW="\033[1;33m"; RED="\033[1;31m"; GREEN="\033[1;32m"; CYAN="\033[1;36m"; MAGENTA="\033[1;35m";
+fi
 
 # Controllo dipendenze
 
@@ -134,6 +152,7 @@ for pkg in $(pacman -Qm | awk '{print $1}'); do
         AUR_PKGS+=("$pkg")
     fi
 done
+
 
 if [ ${#AUR_PKGS[@]} -eq 0 ]; then
     echo "Nessun pacchetto AUR installato (esclusi i pacchetti debug)."
@@ -208,9 +227,10 @@ done
 
 
 
+
 if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
-        echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
+        echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
         for r in "${REMOVED_LIST[@]}"; do
             echo -e "  🟡 $r"
             log "RIMOSSO: $r"
@@ -218,7 +238,7 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         echo ""
     fi
     if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
-        echo -e "\033[1;35m⚠️  Attenzione: pacchetti orfani (Maintainer: None):\033[0m"
+        echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
         for o in "${ORPHAN_LIST[@]}"; do
             echo -e "  🟣 $o"
             log "ORFANO: $o"
@@ -226,7 +246,7 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         echo ""
     fi
     if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
-        echo -e "\033[1;31m⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
+        echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
         for o in "${OUTOFDATE_LIST[@]}"; do
             echo -e "  🔴 $o"
             log "OUT-OF-DATE: $o"
@@ -234,7 +254,7 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         echo ""
     fi
     if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
-        echo -e "\033[1;33m⚠️  Attenzione: dipendenze AUR mancanti:\033[0m"
+        echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
         for d in "${MISSING_AUR_DEPS[@]}"; do
             echo -e "  ⚫ $d"
             log "DIPENDENZA AUR MANCANTE: $d"
@@ -242,7 +262,7 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         echo ""
     fi
     log "Tutti i pacchetti AUR aggiornati."
-    echo -e "\033[1;32m✅ Tutti i pacchetti AUR sono aggiornati.\033[0m"
+    echo -e "${GREEN}✅ Tutti i pacchetti AUR sono aggiornati.${NC}"
     notify "AUR Updater" "Tutti i pacchetti AUR sono aggiornati."
     exit 0
 fi
@@ -257,8 +277,9 @@ echo ""
 
 # 5. Mostra la lista e chiedi cosa aggiornare
 
+
 if [ ${#UPGRADE_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;36m⬆️  Pacchetti AUR aggiornabili:\033[0m"
+    echo -e "${CYAN}⬆️  Pacchetti AUR aggiornabili:${NC}"
     for i in "${!UPGRADE_LIST[@]}"; do
         echo -e "  $((i+1)). ${UPGRADE_LIST[$i]}"
         log "AGGIORNABILE: ${UPGRADE_LIST[$i]}"
@@ -267,28 +288,28 @@ if [ ${#UPGRADE_LIST[@]} -gt 0 ]; then
 fi
 
 if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
+    echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
     for r in "${REMOVED_LIST[@]}"; do
         echo -e "  🟡 $r"
     done
     echo ""
 fi
 if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;35m⚠️  Attenzione: pacchetti orfani (Maintainer: None):\033[0m"
+    echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
     for o in "${ORPHAN_LIST[@]}"; do
         echo -e "  🟣 $o"
     done
     echo ""
 fi
 if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;31m⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
+    echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
     for o in "${OUTOFDATE_LIST[@]}"; do
         echo -e "  🔴 $o"
     done
     echo ""
 fi
 if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
-    echo -e "\033[1;33m⚠️  Attenzione: dipendenze AUR mancanti:\033[0m"
+    echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
     for d in "${MISSING_AUR_DEPS[@]}"; do
         echo -e "  ⚫ $d"
     done
@@ -296,14 +317,15 @@ if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
 fi
 
 
+
 if [ "$ALL_UPDATE" = "1" ]; then
-    TO_UPDATE=("${UPGRADE_NAMES[@]}")
+    TO_UPDATE=(${UPGRADE_NAMES[@]})
     echo "Aggiornamento di tutti i pacchetti senza prompt (--all)."
 else
     echo "Vuoi aggiornare tutti i pacchetti? (s/N)"
     read -r ALL
     if [[ "$ALL" =~ ^[sS]$ ]]; then
-        TO_UPDATE=("${UPGRADE_NAMES[@]}")
+        TO_UPDATE=(${UPGRADE_NAMES[@]})
     else
         echo "Inserisci i numeri dei pacchetti da aggiornare separati da spazio (es: 1 3 5):"
         read -r SELECTION
@@ -346,8 +368,9 @@ for dir in "$BUILD_DIR"/*; do
 done
 
 
+
 for pkg in "${TO_UPDATE[@]}"; do
-    echo -e "\n\033[1;34mAggiornamento di $pkg...\033[0m"
+    echo -e "\n${BOLD}Aggiornamento di $pkg...${NC}"
     log "INIZIO aggiornamento di $pkg"
     cd "$BUILD_DIR"
     if [ -d "$pkg" ]; then
@@ -368,6 +391,7 @@ for pkg in "${TO_UPDATE[@]}"; do
     fi
 done
 
+
 log "Aggiornamento completato."
 notify "AUR Updater" "Aggiornamento completato."
-echo -e "\n\033[1;32mAggiornamento completato.\033[0m"
+echo -e "\n${GREEN}Aggiornamento completato.${NC}"
