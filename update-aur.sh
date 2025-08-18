@@ -12,11 +12,13 @@ notify() {
 
 
 
-# Parsing flag --check, --all, --help/-h, --no-color
+# Parsing flag --check, --all, --help/-h, --no-color, --compact, --full
 CHECK_ONLY=0
 ALL_UPDATE=0
 SHOW_HELP=0
 NO_COLOR=0
+COMPACT=0
+FULL=0
 for arg in "$@"; do
     case "$arg" in
         --check)
@@ -31,6 +33,12 @@ for arg in "$@"; do
         --no-color)
             NO_COLOR=1
             ;;
+        --compact)
+            COMPACT=1
+            ;;
+        --full)
+            FULL=1
+            ;;
     esac
 done
 
@@ -40,12 +48,14 @@ if [ "$SHOW_HELP" = "1" ]; then
 AUR package update script without yay/paru (v$SCRIPT_VERSION)
 -------------------------------------------------------------
 USAGE:
-    ./update-aur.sh [--check] [--all] [--no-color] [--help]
+    ./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--help]
 
 OPTIONS:
     --check      Show only the status of AUR packages (upgradable, orphaned, out-of-date, removed, missing dependencies) without update prompt.
     --all        Update all upgradable AUR packages without interactive prompt.
     --no-color   Disable colored output.
+    --compact    Compact output (one line per package, minimal info).
+    --full       Full output (detailed info, default).
     --help, -h   Show this help and exit.
 
 FEATURES:
@@ -60,9 +70,9 @@ FILE ~/.aurignore:
     List (one per line) AUR packages to exclude from checks/updates.
 
 EXAMPLES:
-    ./update-aur.sh --check
-    ./update-aur.sh --all
-    ./update-aur.sh --no-color
+    ./update-aur.sh --check --compact
+    ./update-aur.sh --all --no-color
+    ./update-aur.sh --full
 EOF
     exit 0
 fi
@@ -101,8 +111,16 @@ else
     NC="\033[0m"; BOLD="\033[1m"; YELLOW="\033[1;33m"; RED="\033[1;31m"; GREEN="\033[1;32m"; CYAN="\033[1;36m"; MAGENTA="\033[1;35m";
 fi
 
-# Controllo dipendenze
 
+# Controllo lock file pacman
+if [ -f /var/lib/pacman/db.lck ]; then
+    echo "${RED}Errore: pacman è attualmente in uso (lock file presente: /var/lib/pacman/db.lck). Riprovare più tardi.${NC}"
+    log "ERRORE: lock file pacman presente."
+    notify "AUR Updater" "Errore: pacman lock file presente."
+    exit 1
+fi
+
+# Controllo dipendenze
 for dep in curl jq git makepkg pacman; do
     if ! command -v "$dep" >/dev/null 2>&1; then
         echo "Errore: il comando '$dep' non è installato."
@@ -228,41 +246,70 @@ done
 
 
 
+
+# Output compatto/esteso (solo per la parte di report)
+compact_echo() {
+    # $1: simbolo, $2: lista
+    for item in "${!2}"; do
+        echo "$1 $item"
+    done
+}
+
 if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
-        echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
-        for r in "${REMOVED_LIST[@]}"; do
-            echo -e "  🟡 $r"
-            log "RIMOSSO: $r"
-        done
-        echo ""
+        if [ "$COMPACT" = "1" ]; then
+            for r in "${REMOVED_LIST[@]}"; do echo "REMOVED: $r"; done
+        else
+            echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
+            for r in "${REMOVED_LIST[@]}"; do
+                echo -e "  🟡 $r"
+                log "RIMOSSO: $r"
+            done
+            echo ""
+        fi
     fi
     if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
-        echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
-        for o in "${ORPHAN_LIST[@]}"; do
-            echo -e "  🟣 $o"
-            log "ORFANO: $o"
-        done
-        echo ""
+        if [ "$COMPACT" = "1" ]; then
+            for o in "${ORPHAN_LIST[@]}"; do echo "ORPHAN: $o"; done
+        else
+            echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
+            for o in "${ORPHAN_LIST[@]}"; do
+                echo -e "  🟣 $o"
+                log "ORFANO: $o"
+            done
+            echo ""
+        fi
     fi
     if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
-        echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
-        for o in "${OUTOFDATE_LIST[@]}"; do
-            echo -e "  🔴 $o"
-            log "OUT-OF-DATE: $o"
-        done
-        echo ""
+        if [ "$COMPACT" = "1" ]; then
+            for o in "${OUTOFDATE_LIST[@]}"; do echo "OUT-OF-DATE: $o"; done
+        else
+            echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
+            for o in "${OUTOFDATE_LIST[@]}"; do
+                echo -e "  🔴 $o"
+                log "OUT-OF-DATE: $o"
+            done
+            echo ""
+        fi
     fi
     if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
-        echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
-        for d in "${MISSING_AUR_DEPS[@]}"; do
-            echo -e "  ⚫ $d"
-            log "DIPENDENZA AUR MANCANTE: $d"
-        done
-        echo ""
+        if [ "$COMPACT" = "1" ]; then
+            for d in "${MISSING_AUR_DEPS[@]}"; do echo "MISSING_DEP: $d"; done
+        else
+            echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
+            for d in "${MISSING_AUR_DEPS[@]}"; do
+                echo -e "  ⚫ $d"
+                log "DIPENDENZA AUR MANCANTE: $d"
+            done
+            echo ""
+        fi
     fi
     log "Tutti i pacchetti AUR aggiornati."
-    echo -e "${GREEN}✅ Tutti i pacchetti AUR sono aggiornati.${NC}"
+    if [ "$COMPACT" = "1" ]; then
+        echo "OK: Tutti i pacchetti AUR sono aggiornati."
+    else
+        echo -e "${GREEN}✅ Tutti i pacchetti AUR sono aggiornati.${NC}"
+    fi
     notify "AUR Updater" "Tutti i pacchetti AUR sono aggiornati."
     exit 0
 fi
@@ -278,42 +325,52 @@ echo ""
 # 5. Mostra la lista e chiedi cosa aggiornare
 
 
+
 if [ ${#UPGRADE_LIST[@]} -gt 0 ]; then
-    echo -e "${CYAN}⬆️  Pacchetti AUR aggiornabili:${NC}"
-    for i in "${!UPGRADE_LIST[@]}"; do
-        echo -e "  $((i+1)). ${UPGRADE_LIST[$i]}"
-        log "AGGIORNABILE: ${UPGRADE_LIST[$i]}"
-    done
-    echo ""
+    if [ "$COMPACT" = "1" ]; then
+        for i in "${!UPGRADE_LIST[@]}"; do
+            echo "UPGRADE: ${UPGRADE_LIST[$i]}"
+            log "AGGIORNABILE: ${UPGRADE_LIST[$i]}"
+        done
+    else
+        echo -e "${CYAN}⬆️  Pacchetti AUR aggiornabili:${NC}"
+        for i in "${!UPGRADE_LIST[@]}"; do
+            echo -e "  $((i+1)). ${UPGRADE_LIST[$i]}"
+            log "AGGIORNABILE: ${UPGRADE_LIST[$i]}"
+        done
+        echo ""
+    fi
 fi
 
-if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
-    for r in "${REMOVED_LIST[@]}"; do
-        echo -e "  🟡 $r"
-    done
-    echo ""
-fi
-if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
-    echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
-    for o in "${ORPHAN_LIST[@]}"; do
-        echo -e "  🟣 $o"
-    done
-    echo ""
-fi
-if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
-    echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
-    for o in "${OUTOFDATE_LIST[@]}"; do
-        echo -e "  🔴 $o"
-    done
-    echo ""
-fi
-if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
-    echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
-    for d in "${MISSING_AUR_DEPS[@]}"; do
-        echo -e "  ⚫ $d"
-    done
-    echo ""
+if [ "$COMPACT" != "1" ]; then
+    if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
+        for r in "${REMOVED_LIST[@]}"; do
+            echo -e "  🟡 $r"
+        done
+        echo ""
+    fi
+    if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
+        echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
+        for o in "${ORPHAN_LIST[@]}"; do
+            echo -e "  🟣 $o"
+        done
+        echo ""
+    fi
+    if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
+        echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
+        for o in "${OUTOFDATE_LIST[@]}"; do
+            echo -e "  🔴 $o"
+        done
+        echo ""
+    fi
+    if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
+        for d in "${MISSING_AUR_DEPS[@]}"; do
+            echo -e "  ⚫ $d"
+        done
+        echo ""
+    fi
 fi
 
 
