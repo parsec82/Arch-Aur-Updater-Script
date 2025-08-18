@@ -2,6 +2,14 @@ LOG_FILE="$HOME/aur-update.log"
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
+
+# Parsing flag --check
+CHECK_ONLY=0
+for arg in "$@"; do
+    if [[ "$arg" == "--check" ]]; then
+        CHECK_ONLY=1
+    fi
+done
 #!/bin/bash
 # Script per controllare e aggiornare pacchetti AUR senza yay/paru
 # Richiede: curl, jq, git, makepkg, pacman
@@ -95,6 +103,7 @@ done
 
 # Se non ci sono aggiornamenti, ma ci sono orfani/out-of-date/rimossi, mostra comunque le segnalazioni
 
+
 if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
         echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
@@ -122,6 +131,11 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     fi
     log "Tutti i pacchetti AUR aggiornati."
     echo -e "\033[1;32m✅ Tutti i pacchetti AUR sono aggiornati.\033[0m"
+    exit 0
+fi
+
+# Se richiesto solo check, mostra stato e termina
+if [ "$CHECK_ONLY" = "1" ]; then
     exit 0
 fi
 
