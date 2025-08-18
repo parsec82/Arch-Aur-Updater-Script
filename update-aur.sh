@@ -52,9 +52,30 @@ fi
 
 
 
+
+# Carica lista pacchetti da ignorare da ~/.aurignore (uno per riga, commenti e righe vuote ignorate)
+IGNORE_LIST=()
+if [ -f "$HOME/.aurignore" ]; then
+    while IFS= read -r line; do
+        line="${line%%#*}" # rimuovi commenti
+        line="${line// /}" # rimuovi spazi
+        [ -n "$line" ] && IGNORE_LIST+=("$line")
+    done < "$HOME/.aurignore"
+fi
+
 AUR_PKGS=()
 for pkg in $(pacman -Qm | awk '{print $1}'); do
-    if [[ "$pkg" != *debug* ]]; then
+    skip=0
+    if [[ "$pkg" == *debug* ]]; then
+        skip=1
+    fi
+    for ign in "${IGNORE_LIST[@]}"; do
+        if [[ "$pkg" == "$ign" ]]; then
+            skip=1
+            break
+        fi
+    done
+    if [ $skip -eq 0 ]; then
         AUR_PKGS+=("$pkg")
     fi
 done
