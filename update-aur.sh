@@ -84,27 +84,27 @@ done
 # Se non ci sono aggiornamenti, ma ci sono orfani/out-of-date/rimossi, mostra comunque le segnalazioni
 if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
-        echo -e "\033[1;33mAttenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
+        echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
         for r in "${REMOVED_LIST[@]}"; do
-            echo "  $r"
+            echo -e "  🟡 $r"
         done
         echo ""
     fi
     if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
-        echo -e "\033[1;35mAttenzione: pacchetti orfani (Maintainer: None):\033[0m"
+        echo -e "\033[1;35m⚠️  Attenzione: pacchetti orfani (Maintainer: None):\033[0m"
         for o in "${ORPHAN_LIST[@]}"; do
-            echo "  $o"
+            echo -e "  🟣 $o"
         done
         echo ""
     fi
     if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
-        echo -e "\033[1;31mAttenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
+        echo -e "\033[1;31m⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
         for o in "${OUTOFDATE_LIST[@]}"; do
-            echo "  $o"
+            echo -e "  🔴 $o"
         done
         echo ""
     fi
-    echo "Tutti i pacchetti AUR sono aggiornati."
+    echo -e "\033[1;32m✅ Tutti i pacchetti AUR sono aggiornati.\033[0m"
     exit 0
 fi
 
@@ -113,30 +113,30 @@ echo ""
 # 5. Mostra la lista e chiedi cosa aggiornare
 
 if [ ${#UPGRADE_LIST[@]} -gt 0 ]; then
-    echo "Pacchetti AUR aggiornabili:"
+    echo -e "\033[1;36m⬆️  Pacchetti AUR aggiornabili:\033[0m"
     for i in "${!UPGRADE_LIST[@]}"; do
-        echo "$((i+1)). ${UPGRADE_LIST[$i]}"
+        echo -e "  $((i+1)). ${UPGRADE_LIST[$i]}"
     done
     echo ""
 fi
 if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;33mAttenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
+    echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
     for r in "${REMOVED_LIST[@]}"; do
-        echo "  $r"
+        echo -e "  🟡 $r"
     done
     echo ""
 fi
 if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;35mAttenzione: pacchetti orfani (Maintainer: None):\033[0m"
+    echo -e "\033[1;35m⚠️  Attenzione: pacchetti orfani (Maintainer: None):\033[0m"
     for o in "${ORPHAN_LIST[@]}"; do
-        echo "  $o"
+        echo -e "  🟣 $o"
     done
     echo ""
 fi
 if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
-    echo -e "\033[1;31mAttenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
+    echo -e "\033[1;31m⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
     for o in "${OUTOFDATE_LIST[@]}"; do
-        echo "  $o"
+        echo -e "  🔴 $o"
     done
     echo ""
 fi
