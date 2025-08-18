@@ -10,20 +10,72 @@ notify() {
     fi
 }
 
-# Parsing flag --check e --all
+
+# Parsing flag --check, --all, --help/-h
 CHECK_ONLY=0
 ALL_UPDATE=0
+SHOW_HELP=0
 for arg in "$@"; do
-    if [[ "$arg" == "--check" ]]; then
-        CHECK_ONLY=1
-    fi
-    if [[ "$arg" == "--all" ]]; then
-        ALL_UPDATE=1
-    fi
+        if [[ "$arg" == "--check" ]]; then
+                CHECK_ONLY=1
+        fi
+        if [[ "$arg" == "--all" ]]; then
+                ALL_UPDATE=1
+        fi
+        if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+                SHOW_HELP=1
+        fi
 done
+
+if [ "$SHOW_HELP" = "1" ]; then
+        cat <<EOF
+Script aggiornamento pacchetti AUR senza yay/paru (v$SCRIPT_VERSION)
+-------------------------------------------------------------
+USO:
+    ./update-aur.sh [--check] [--all] [--help]
+
+OPZIONI:
+    --check     Mostra solo lo stato dei pacchetti AUR (aggiornabili, orfani, out-of-date, rimossi, dipendenze mancanti) senza prompt di aggiornamento.
+    --all       Aggiorna tutti i pacchetti AUR aggiornabili senza prompt interattivo.
+    --help, -h  Mostra questo help e termina.
+
+FUNZIONALITÀ:
+    - Ignora pacchetti *debug* e quelli elencati in ~/.aurignore
+    - Segnala pacchetti orfani, out-of-date, rimossi, dipendenze AUR mancanti
+    - Log dettagliato in ~/aur-update.log
+    - Notifiche desktop (notify-send)
+    - Pulizia automatica delle directory di build obsolete
+    - Controllo nuova versione script da GitHub
+
+FILE ~/.aurignore:
+    Elenca (uno per riga) i pacchetti AUR da escludere da controlli/aggiornamenti.
+
+ESEMPIO:
+    ./update-aur.sh --check
+    ./update-aur.sh --all
+    ./update-aur.sh
+EOF
+        exit 0
+fi
+
 #!/bin/bash
 # Script per controllare e aggiornare pacchetti AUR senza yay/paru
 # Richiede: curl, jq, git, makepkg, pacman
+
+# === VERSIONE SCRIPT ===
+SCRIPT_VERSION="3.1"
+
+# Controllo aggiornamenti script da GitHub
+GITHUB_REPO="parsec82/Arch-Aur-Updater-Script"
+GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
+LATEST_VERSION=""
+if command -v curl >/dev/null 2>&1; then
+    LATEST_VERSION=$(curl -fsSL "$GITHUB_API" | jq -r .tag_name 2>/dev/null | sed 's/^v//')
+    if [ -n "$LATEST_VERSION" ] && [ "$LATEST_VERSION" != "null" ] && [ "$LATEST_VERSION" != "$SCRIPT_VERSION" ]; then
+        echo -e "\033[1;33m\n⚠️  È disponibile una nuova versione dello script: $LATEST_VERSION (tu stai usando $SCRIPT_VERSION)\033[0m"
+        notify "AUR Updater" "Nuova versione script disponibile: $LATEST_VERSION (tu: $SCRIPT_VERSION)"
+    fi
+fi
 
 
 set -e
