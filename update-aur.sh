@@ -22,7 +22,7 @@ fi
 
 
 
-# 1. Recupera la lista dei pacchetti AUR installati, ignorando quelli con "debug" nel nome
+
 AUR_PKGS=()
 for pkg in $(pacman -Qm | awk '{print $1}'); do
     if [[ "$pkg" != *debug* ]]; then
@@ -34,26 +34,23 @@ if [ ${#AUR_PKGS[@]} -eq 0 ]; then
     exit 0
 fi
 
-# 2. Recupera le versioni installate
+# Recupera le versioni installate
 INSTALLED_VERSIONS=()
+PKG_ARGS=""
 for pkg in "${AUR_PKGS[@]}"; do
     ver=$(pacman -Q $pkg | awk '{print $2}')
     INSTALLED_VERSIONS+=("$ver")
     PKG_ARGS+="&arg[]=$pkg"
 done
 
-# 3. Interroga l'AUR API per le versioni disponibili
+# Interroga l'AUR API per le versioni disponibili
 AUR_API_URL="https://aur.archlinux.org/rpc/?v=5&type=info${PKG_ARGS}"
-
-# Gestione errori di rete
 AUR_INFO=$(curl -fsSL "$AUR_API_URL") || {
     echo "Errore di rete: impossibile contattare l'AUR."
     exit 2
 }
 
-
-
-# 4. Confronta le versioni, segnala pacchetti rimossi, orfani e out-of-date
+# Confronta le versioni e costruisci le liste
 UPGRADE_LIST=()
 UPGRADE_NAMES=()
 REMOVED_LIST=()
@@ -82,7 +79,31 @@ for i in "${!AUR_PKGS[@]}"; do
     fi
 done
 
-if [ ${#UPGRADE_LIST[@]} -eq 0 ] && [ ${#REMOVED_LIST[@]} -eq 0 ] && [ ${#ORPHAN_LIST[@]} -eq 0 ] && [ ${#OUTOFDATE_LIST[@]} -eq 0 ]; then
+
+
+# Se non ci sono aggiornamenti, ma ci sono orfani/out-of-date/rimossi, mostra comunque le segnalazioni
+if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
+    if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
+        echo -e "\033[1;33mAttenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
+        for r in "${REMOVED_LIST[@]}"; do
+            echo "  $r"
+        done
+        echo ""
+    fi
+    if [ ${#ORPHAN_LIST[@]} -gt 0 ]; then
+        echo -e "\033[1;35mAttenzione: pacchetti orfani (Maintainer: None):\033[0m"
+        for o in "${ORPHAN_LIST[@]}"; do
+            echo "  $o"
+        done
+        echo ""
+    fi
+    if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
+        echo -e "\033[1;31mAttenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
+        for o in "${OUTOFDATE_LIST[@]}"; do
+            echo "  $o"
+        done
+        echo ""
+    fi
     echo "Tutti i pacchetti AUR sono aggiornati."
     exit 0
 fi
