@@ -74,12 +74,14 @@ AUR_INFO=$(curl -fsSL "$AUR_API_URL") || {
     exit 2
 }
 
+
 # Confronta le versioni e costruisci le liste
 UPGRADE_LIST=()
 UPGRADE_NAMES=()
 REMOVED_LIST=()
 ORPHAN_LIST=()
 OUTOFDATE_LIST=()
+MISSING_AUR_DEPS=()
 for i in "${!AUR_PKGS[@]}"; do
     pkg="${AUR_PKGS[$i]}"
     inst_ver="${INSTALLED_VERSIONS[$i]}"
@@ -100,12 +102,23 @@ for i in "${!AUR_PKGS[@]}"; do
         if [ "$outofdate" != "null" ] && [ "$outofdate" != "0" ]; then
             OUTOFDATE_LIST+=("$pkg ($inst_ver) - FLAGGATO OUT-OF-DATE")
         fi
+        # Controllo dipendenze AUR mancanti
+        depends=$(echo "$pkg_info" | jq -r '.Depends[]?' | grep -v ":" || true)
+        for dep in $depends; do
+            if ! pacman -Qq "$dep" &>/dev/null; then
+                # Se la dipendenza non è installata e non è nei repo ufficiali
+                if ! pacman -Si "$dep" &>/dev/null; then
+                    MISSING_AUR_DEPS+=("$dep (richiesto da $pkg)")
+                fi
+            fi
+        done
     fi
 done
 
 
 
 # Se non ci sono aggiornamenti, ma ci sono orfani/out-of-date/rimossi, mostra comunque le segnalazioni
+
 
 
 if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
@@ -133,6 +146,14 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         done
         echo ""
     fi
+    if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
+        echo -e "\033[1;33m⚠️  Attenzione: dipendenze AUR mancanti:\033[0m"
+        for d in "${MISSING_AUR_DEPS[@]}"; do
+            echo -e "  ⚫ $d"
+            log "DIPENDENZA AUR MANCANTE: $d"
+        done
+        echo ""
+    fi
     log "Tutti i pacchetti AUR aggiornati."
     echo -e "\033[1;32m✅ Tutti i pacchetti AUR sono aggiornati.\033[0m"
     exit 0
@@ -155,6 +176,7 @@ if [ ${#UPGRADE_LIST[@]} -gt 0 ]; then
     done
     echo ""
 fi
+
 if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
     echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
     for r in "${REMOVED_LIST[@]}"; do
@@ -173,6 +195,13 @@ if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
     echo -e "\033[1;31m⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
     for o in "${OUTOFDATE_LIST[@]}"; do
         echo -e "  🔴 $o"
+    done
+    echo ""
+fi
+if [ ${#MISSING_AUR_DEPS[@]} -gt 0 ]; then
+    echo -e "\033[1;33m⚠️  Attenzione: dipendenze AUR mancanti:\033[0m"
+    for d in "${MISSING_AUR_DEPS[@]}"; do
+        echo -e "  ⚫ $d"
     done
     echo ""
 fi
