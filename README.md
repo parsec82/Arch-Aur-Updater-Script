@@ -1,5 +1,7 @@
 
-# update-aur.sh
+
+# Arch Aur Updater Script
+
 
 **English below | Italiano in fondo**
 
@@ -11,9 +13,11 @@
 
 ---
 
+
 # English
 
 Bash script to check and update AUR packages on Arch Linux **without** using yay, paru, or other AUR helpers.
+This project is called **Arch Aur Updater Script**.
 
 ## Features
 - Lists installed AUR packages (excluding those with "debug" in the name)
@@ -72,9 +76,11 @@ MIT
 
 ---
 
+
 # Italiano
 
 Script Bash per controllare e aggiornare pacchetti AUR su Arch Linux **senza** usare yay, paru o altri AUR helper.
+Questo progetto si chiama **Arch Aur Updater Script**.
 
 ## Funzionalità
 - Elenca i pacchetti AUR installati (escludendo quelli con "debug" nel nome)
