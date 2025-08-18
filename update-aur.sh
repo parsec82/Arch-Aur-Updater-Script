@@ -3,11 +3,15 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Parsing flag --check
+# Parsing flag --check e --all
 CHECK_ONLY=0
+ALL_UPDATE=0
 for arg in "$@"; do
     if [[ "$arg" == "--check" ]]; then
         CHECK_ONLY=1
+    fi
+    if [[ "$arg" == "--all" ]]; then
+        ALL_UPDATE=1
     fi
 done
 #!/bin/bash
@@ -173,25 +177,31 @@ if [ ${#OUTOFDATE_LIST[@]} -gt 0 ]; then
     echo ""
 fi
 
-echo "Vuoi aggiornare tutti i pacchetti? (s/N)"
-read -r ALL
-if [[ "$ALL" =~ ^[sS]$ ]]; then
+
+if [ "$ALL_UPDATE" = "1" ]; then
     TO_UPDATE=("${UPGRADE_NAMES[@]}")
+    echo "Aggiornamento di tutti i pacchetti senza prompt (--all)."
 else
-    echo "Inserisci i numeri dei pacchetti da aggiornare separati da spazio (es: 1 3 5):"
-    read -r SELECTION
-    TO_UPDATE=()
-    for idx in $SELECTION; do
-        if [[ "$idx" =~ ^[0-9]+$ ]] && [ "$idx" -ge 1 ] && [ "$idx" -le ${#UPGRADE_NAMES[@]} ]; then
-            idx0=$((idx-1))
-            TO_UPDATE+=("${UPGRADE_NAMES[$idx0]}")
-        else
-            echo "Valore non valido: $idx. Ignorato."
+    echo "Vuoi aggiornare tutti i pacchetti? (s/N)"
+    read -r ALL
+    if [[ "$ALL" =~ ^[sS]$ ]]; then
+        TO_UPDATE=("${UPGRADE_NAMES[@]}")
+    else
+        echo "Inserisci i numeri dei pacchetti da aggiornare separati da spazio (es: 1 3 5):"
+        read -r SELECTION
+        TO_UPDATE=()
+        for idx in $SELECTION; do
+            if [[ "$idx" =~ ^[0-9]+$ ]] && [ "$idx" -ge 1 ] && [ "$idx" -le ${#UPGRADE_NAMES[@]} ]; then
+                idx0=$((idx-1))
+                TO_UPDATE+=("${UPGRADE_NAMES[$idx0]}")
+            else
+                echo "Valore non valido: $idx. Ignorato."
+            fi
+        done
+        if [ ${#TO_UPDATE[@]} -eq 0 ]; then
+            echo "Nessun pacchetto selezionato. Uscita."
+            exit 0
         fi
-    done
-    if [ ${#TO_UPDATE[@]} -eq 0 ]; then
-        echo "Nessun pacchetto selezionato. Uscita."
-        exit 0
     fi
 fi
 
