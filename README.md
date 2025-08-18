@@ -9,7 +9,10 @@
 ---
 
 
+
 ## English
+
+**Version: 3.5**
 
 Bash script for Arch Linux to:
 - Check for updates of installed AUR packages
@@ -22,6 +25,7 @@ Bash script for Arch Linux to:
 - Checks for new script version on GitHub
 - Supports `--check`, `--all`, `--no-color`, `--compact`, `--full`, `--help/-h` flags
 - Handles pacman lock file: aborts if `/var/lib/pacman/db.lck` exists
+- All output, prompts and notifications are in English
 
 ### Usage
 
@@ -49,7 +53,10 @@ List (one per line) AUR packages to exclude from checks/updates.
 ---
 
 
+
 ## Italiano
+
+**Versione: 3.5**
 
 Script per Arch Linux che:
 - Controlla aggiornamenti dei pacchetti AUR installati
@@ -62,6 +69,7 @@ Script per Arch Linux che:
 - Controlla se esiste una nuova versione dello script su GitHub
 - Supporta i flag `--check`, `--all`, `--no-color`, `--compact`, `--full`, `--help/-h`
 - Gestisce il lock file di pacman: termina se `/var/lib/pacman/db.lck` esiste
+- Tutto l'output, i prompt e le notifiche sono ora in inglese
 
 ### Uso
 
@@ -104,6 +112,7 @@ Elenca (uno per riga) i pacchetti AUR da escludere da controlli/aggiornamenti.
 - Script version check
 - Integrated help
 - Pacman lock file detection
+- All output, prompts and notifications are in English
 
 ## Script update / Aggiornamento script
 The script automatically checks for new versions on GitHub.

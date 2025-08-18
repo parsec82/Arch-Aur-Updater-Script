@@ -3,7 +3,7 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
-# Funzione notifica desktop (se notify-send disponibile)
+# Desktop notification function (if notify-send available)
 notify() {
     if command -v notify-send >/dev/null 2>&1; then
         notify-send "$1" "$2"
@@ -78,14 +78,14 @@ EOF
 fi
 
 #!/bin/bash
-# Script per controllare e aggiornare pacchetti AUR senza yay/paru
-# Richiede: curl, jq, git, makepkg, pacman
+# Script to check and update AUR packages without yay/paru
+# Requires: curl, jq, git, makepkg, pacman
 
 
 # === VERSIONE SCRIPT ===
 SCRIPT_VERSION="3.5"
 
-# Controllo aggiornamenti script da GitHub
+# Script update check from GitHub
 GITHUB_REPO="parsec82/Arch-Aur-Updater-Script"
 GITHUB_API="https://api.github.com/repos/$GITHUB_REPO/releases/latest"
 LATEST_VERSION=""
@@ -104,7 +104,7 @@ fi
 
 set -e
 
-# Colori (disabilitabili)
+# Colors (can be disabled)
 if [ "$NO_COLOR" = "1" ]; then
     NC=""; BOLD=""; YELLOW=""; RED=""; GREEN=""; CYAN=""; MAGENTA="";
 else
@@ -112,31 +112,30 @@ else
 fi
 
 
-# Controllo lock file pacman
+# Pacman lock file check
 if [ -f /var/lib/pacman/db.lck ]; then
-    echo "${RED}Errore: pacman è attualmente in uso (lock file presente: /var/lib/pacman/db.lck). Riprovare più tardi.${NC}"
-    log "ERRORE: lock file pacman presente."
-    notify "AUR Updater" "Errore: pacman lock file presente."
+    echo "${RED}Error: pacman is currently in use (lock file present: /var/lib/pacman/db.lck). Please try again later.${NC}"
+    log "ERROR: pacman lock file present."
+    notify "AUR Updater" "Error: pacman lock file present."
     exit 1
 fi
 
-# Controllo dipendenze
+# Dependency check
 for dep in curl jq git makepkg pacman; do
     if ! command -v "$dep" >/dev/null 2>&1; then
-        echo "Errore: il comando '$dep' non è installato."
-        log "ERRORE: dipendenza mancante: $dep"
-        notify "AUR Updater" "Errore: dipendenza mancante: $dep"
+        echo "Error: command '$dep' is not installed."
+        log "ERROR: missing dependency: $dep"
+        notify "AUR Updater" "Error: missing dependency: $dep"
         exit 1
     fi
 done
 
 
-# Non eseguire come root
-
+# Do not run as root
 if [ "$EUID" -eq 0 ]; then
-    echo "Non eseguire questo script come root. Usa un utente normale."
-    log "ERRORE: esecuzione come root bloccata."
-    notify "AUR Updater" "Errore: esecuzione come root bloccata."
+    echo "Do not run this script as root. Use a normal user."
+    log "ERROR: running as root is blocked."
+    notify "AUR Updater" "Error: running as root is blocked."
     exit 1
 fi
 
@@ -144,7 +143,7 @@ fi
 
 
 
-# Carica lista pacchetti da ignorare da ~/.aurignore (uno per riga, commenti e righe vuote ignorate)
+# Load ignore list from ~/.aurignore (one per line, ignores comments and empty lines)
 IGNORE_LIST=()
 if [ -f "$HOME/.aurignore" ]; then
     while IFS= read -r line; do
@@ -173,13 +172,13 @@ done
 
 
 if [ ${#AUR_PKGS[@]} -eq 0 ]; then
-    echo "Nessun pacchetto AUR installato (esclusi i pacchetti debug)."
-    log "Nessun pacchetto AUR installato (esclusi debug)."
-    notify "AUR Updater" "Nessun pacchetto AUR installato (esclusi debug)."
+    echo "No AUR packages installed (excluding debug packages)."
+    log "No AUR packages installed (excluding debug)."
+    notify "AUR Updater" "No AUR packages installed (excluding debug)."
     exit 0
 fi
 
-# Recupera le versioni installate
+# Get installed versions
 INSTALLED_VERSIONS=()
 PKG_ARGS=""
 for pkg in "${AUR_PKGS[@]}"; do
@@ -188,18 +187,18 @@ for pkg in "${AUR_PKGS[@]}"; do
     PKG_ARGS+="&arg[]=$pkg"
 done
 
-# Interroga l'AUR API per le versioni disponibili
+# Query AUR API for available versions
 AUR_API_URL="https://aur.archlinux.org/rpc/?v=5&type=info${PKG_ARGS}"
 
 AUR_INFO=$(curl -fsSL "$AUR_API_URL") || {
-    echo "Errore di rete: impossibile contattare l'AUR."
-    log "ERRORE: impossibile contattare l'AUR."
-    notify "AUR Updater" "Errore di rete: impossibile contattare l'AUR."
+    echo "Network error: unable to contact AUR."
+    log "ERROR: unable to contact AUR."
+    notify "AUR Updater" "Network error: unable to contact AUR."
     exit 2
 }
 
 
-# Confronta le versioni e costruisci le liste
+# Compare versions and build lists
 UPGRADE_LIST=()
 UPGRADE_NAMES=()
 REMOVED_LIST=()
@@ -214,25 +213,25 @@ for i in "${!AUR_PKGS[@]}"; do
     maintainer=$(echo "$pkg_info" | jq -r ".Maintainer")
     outofdate=$(echo "$pkg_info" | jq -r ".OutOfDate")
     if [ "$aur_ver" == "null" ]; then
-        REMOVED_LIST+=("$pkg ($inst_ver) - RIMOSSO DA AUR")
+    REMOVED_LIST+=("$pkg ($inst_ver) - REMOVED FROM AUR")
     else
         if [ "$aur_ver" != "$inst_ver" ]; then
             UPGRADE_LIST+=("$pkg ($inst_ver -> $aur_ver)")
             UPGRADE_NAMES+=("$pkg")
         fi
         if [ "$maintainer" == "null" ]; then
-            ORPHAN_LIST+=("$pkg ($inst_ver) - ORFANO (Maintainer: None)")
+            ORPHAN_LIST+=("$pkg ($inst_ver) - ORPHAN (Maintainer: None)")
         fi
         if [ "$outofdate" != "null" ] && [ "$outofdate" != "0" ]; then
-            OUTOFDATE_LIST+=("$pkg ($inst_ver) - FLAGGATO OUT-OF-DATE")
+            OUTOFDATE_LIST+=("$pkg ($inst_ver) - FLAGGED OUT-OF-DATE")
         fi
-        # Controllo dipendenze AUR mancanti
+        # Check for missing AUR dependencies
         depends=$(echo "$pkg_info" | jq -r '.Depends[]?' | grep -v ":" || true)
         for dep in $depends; do
             if ! pacman -Qq "$dep" &>/dev/null; then
-                # Se la dipendenza non è installata e non è nei repo ufficiali
+                # If dependency is not installed and not in official repos
                 if ! pacman -Si "$dep" &>/dev/null; then
-                    MISSING_AUR_DEPS+=("$dep (richiesto da $pkg)")
+                    MISSING_AUR_DEPS+=("$dep (required by $pkg)")
                 fi
             fi
         done
@@ -241,15 +240,15 @@ done
 
 
 
-# Se non ci sono aggiornamenti, ma ci sono orfani/out-of-date/rimossi, mostra comunque le segnalazioni
+# If there are no updates, but there are orphans/out-of-date/removed, still show warnings
 
 
 
 
 
-# Output compatto/esteso (solo per la parte di report)
+# Compact/full output (for report section only)
 compact_echo() {
-    # $1: simbolo, $2: lista
+    # $1: symbol, $2: list
     for item in "${!2}"; do
         echo "$1 $item"
     done
@@ -260,10 +259,10 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         if [ "$COMPACT" = "1" ]; then
             for r in "${REMOVED_LIST[@]}"; do echo "REMOVED: $r"; done
         else
-            echo -e "${YELLOW}⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:${NC}"
+            echo -e "${YELLOW}⚠️  Warning: some packages have been removed from AUR:${NC}"
             for r in "${REMOVED_LIST[@]}"; do
                 echo -e "  🟡 $r"
-                log "RIMOSSO: $r"
+                log "REMOVED: $r"
             done
             echo ""
         fi
@@ -272,10 +271,10 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         if [ "$COMPACT" = "1" ]; then
             for o in "${ORPHAN_LIST[@]}"; do echo "ORPHAN: $o"; done
         else
-            echo -e "${MAGENTA}⚠️  Attenzione: pacchetti orfani (Maintainer: None):${NC}"
+            echo -e "${MAGENTA}⚠️  Warning: orphan packages (Maintainer: None):${NC}"
             for o in "${ORPHAN_LIST[@]}"; do
                 echo -e "  🟣 $o"
-                log "ORFANO: $o"
+                log "ORPHAN: $o"
             done
             echo ""
         fi
@@ -284,7 +283,7 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         if [ "$COMPACT" = "1" ]; then
             for o in "${OUTOFDATE_LIST[@]}"; do echo "OUT-OF-DATE: $o"; done
         else
-            echo -e "${RED}⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:${NC}"
+            echo -e "${RED}⚠️  Warning: packages flagged as OUT-OF-DATE:${NC}"
             for o in "${OUTOFDATE_LIST[@]}"; do
                 echo -e "  🔴 $o"
                 log "OUT-OF-DATE: $o"
@@ -296,27 +295,27 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         if [ "$COMPACT" = "1" ]; then
             for d in "${MISSING_AUR_DEPS[@]}"; do echo "MISSING_DEP: $d"; done
         else
-            echo -e "${YELLOW}⚠️  Attenzione: dipendenze AUR mancanti:${NC}"
+            echo -e "${YELLOW}⚠️  Warning: missing AUR dependencies:${NC}"
             for d in "${MISSING_AUR_DEPS[@]}"; do
                 echo -e "  ⚫ $d"
-                log "DIPENDENZA AUR MANCANTE: $d"
+                log "MISSING AUR DEP: $d"
             done
             echo ""
         fi
     fi
-    log "Tutti i pacchetti AUR aggiornati."
+    log "All AUR packages are up to date."
     if [ "$COMPACT" = "1" ]; then
-        echo "OK: Tutti i pacchetti AUR sono aggiornati."
+        echo "OK: All AUR packages are up to date."
     else
-        echo -e "${GREEN}✅ Tutti i pacchetti AUR sono aggiornati.${NC}"
+        echo -e "${GREEN}✅ All AUR packages are up to date.${NC}"
     fi
-    notify "AUR Updater" "Tutti i pacchetti AUR sono aggiornati."
+    notify "AUR Updater" "All AUR packages are up to date."
     exit 0
 fi
 
-# Se richiesto solo check, mostra stato e termina
+# If only check requested, show status and exit
 if [ "$CHECK_ONLY" = "1" ]; then
-    notify "AUR Updater" "Check completato: nessun aggiornamento eseguito."
+    notify "AUR Updater" "Check completed: no update performed."
     exit 0
 fi
 
@@ -377,14 +376,14 @@ fi
 
 if [ "$ALL_UPDATE" = "1" ]; then
     TO_UPDATE=(${UPGRADE_NAMES[@]})
-    echo "Aggiornamento di tutti i pacchetti senza prompt (--all)."
+    echo "Updating all packages without prompt (--all)."
 else
-    echo "Vuoi aggiornare tutti i pacchetti? (s/N)"
+    echo "Do you want to update all packages? (y/N)"
     read -r ALL
-    if [[ "$ALL" =~ ^[sS]$ ]]; then
+    if [[ "$ALL" =~ ^[yY]$ ]]; then
         TO_UPDATE=(${UPGRADE_NAMES[@]})
     else
-        echo "Inserisci i numeri dei pacchetti da aggiornare separati da spazio (es: 1 3 5):"
+        echo "Enter the numbers of the packages to update separated by space (e.g.: 1 3 5):"
         read -r SELECTION
         TO_UPDATE=()
         for idx in $SELECTION; do
@@ -392,21 +391,21 @@ else
                 idx0=$((idx-1))
                 TO_UPDATE+=("${UPGRADE_NAMES[$idx0]}")
             else
-                echo "Valore non valido: $idx. Ignorato."
+                echo "Invalid value: $idx. Ignored."
             fi
         done
         if [ ${#TO_UPDATE[@]} -eq 0 ]; then
-            echo "Nessun pacchetto selezionato. Uscita."
+            echo "No package selected. Exiting."
             exit 0
         fi
     fi
 fi
 
 
-# 6. Pulizia automatica delle directory di build non più usate
+# 6. Automatic cleanup of obsolete build directories
 BUILD_DIR="$HOME/aurbuild"
 mkdir -p "$BUILD_DIR"
-# Rimuovi directory di pacchetti non più installati
+# Remove build directories of packages no longer installed
 for dir in "$BUILD_DIR"/*; do
     [ -d "$dir" ] || continue
     dname="$(basename "$dir")"
@@ -418,8 +417,8 @@ for dir in "$BUILD_DIR"/*; do
         fi
     done
     if [ $found -eq 0 ]; then
-        echo -e "\033[0;33mPulizia: rimozione directory build obsoleta $dname\033[0m"
-        log "PULIZIA: rimossa directory build obsoleta $dname"
+        echo -e "\033[0;33mCleanup: removing obsolete build directory $dname\033[0m"
+        log "CLEANUP: removed obsolete build directory $dname"
         rm -rf "$dir"
     fi
 done
@@ -427,28 +426,28 @@ done
 
 
 for pkg in "${TO_UPDATE[@]}"; do
-    echo -e "\n${BOLD}Aggiornamento di $pkg...${NC}"
-    log "INIZIO aggiornamento di $pkg"
+    echo -e "\n${BOLD}Updating $pkg...${NC}"
+    log "START updating $pkg"
     cd "$BUILD_DIR"
     if [ -d "$pkg" ]; then
-        cd "$pkg" && git pull || { echo "Impossibile aggiornare repo $pkg"; log "ERRORE: git pull fallito per $pkg"; continue; }
+        cd "$pkg" && git pull || { echo "Unable to update repo $pkg"; log "ERROR: git pull failed for $pkg"; continue; }
     else
-        git clone "https://aur.archlinux.org/$pkg.git" || { echo "Clonazione fallita per $pkg"; log "ERRORE: clonazione fallita per $pkg"; continue; }
+        git clone "https://aur.archlinux.org/$pkg.git" || { echo "Clone failed for $pkg"; log "ERROR: clone failed for $pkg"; continue; }
         cd "$pkg"
     fi
-    # makepkg va eseguito come utente normale, pacman chiederà sudo se necessario
+    # makepkg must be run as normal user, pacman will ask for sudo if needed
     if makepkg -si --noconfirm; then
-        log "SUCCESSO: $pkg aggiornato e installato."
+        log "SUCCESS: $pkg updated and installed."
         cd "$BUILD_DIR"
         rm -rf "$pkg"
     else
-        echo "Errore durante la compilazione/installazione di $pkg."
-        log "ERRORE: makepkg/install fallito per $pkg"
+        echo "Error during build/install of $pkg."
+        log "ERROR: makepkg/install failed for $pkg"
         cd "$BUILD_DIR"
     fi
 done
 
 
-log "Aggiornamento completato."
-notify "AUR Updater" "Aggiornamento completato."
-echo -e "\n${GREEN}Aggiornamento completato.${NC}"
+log "Update completed."
+notify "AUR Updater" "Update completed."
+echo -e "\n${GREEN}Update completed.${NC}"
