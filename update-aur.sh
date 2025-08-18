@@ -234,9 +234,27 @@ else
     fi
 fi
 
-# 6. Aggiorna i pacchetti selezionati
+
+# 6. Pulizia automatica delle directory di build non più usate
 BUILD_DIR="$HOME/aurbuild"
 mkdir -p "$BUILD_DIR"
+# Rimuovi directory di pacchetti non più installati
+for dir in "$BUILD_DIR"/*; do
+    [ -d "$dir" ] || continue
+    dname="$(basename "$dir")"
+    found=0
+    for pkg in "${AUR_PKGS[@]}"; do
+        if [ "$dname" = "$pkg" ]; then
+            found=1
+            break
+        fi
+    done
+    if [ $found -eq 0 ]; then
+        echo -e "\033[0;33mPulizia: rimozione directory build obsoleta $dname\033[0m"
+        log "PULIZIA: rimossa directory build obsoleta $dname"
+        rm -rf "$dir"
+    fi
+done
 
 
 for pkg in "${TO_UPDATE[@]}"; do
