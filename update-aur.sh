@@ -1,3 +1,7 @@
+LOG_FILE="$HOME/aur-update.log"
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
+}
 #!/bin/bash
 # Script per controllare e aggiornare pacchetti AUR senza yay/paru
 # Richiede: curl, jq, git, makepkg, pacman
@@ -6,17 +10,21 @@
 set -e
 
 # Controllo dipendenze
+
 for dep in curl jq git makepkg pacman; do
     if ! command -v "$dep" >/dev/null 2>&1; then
         echo "Errore: il comando '$dep' non è installato."
+        log "ERRORE: dipendenza mancante: $dep"
         exit 1
     fi
 done
 
 
 # Non eseguire come root
+
 if [ "$EUID" -eq 0 ]; then
     echo "Non eseguire questo script come root. Usa un utente normale."
+    log "ERRORE: esecuzione come root bloccata."
     exit 1
 fi
 
@@ -29,8 +37,10 @@ for pkg in $(pacman -Qm | awk '{print $1}'); do
         AUR_PKGS+=("$pkg")
     fi
 done
+
 if [ ${#AUR_PKGS[@]} -eq 0 ]; then
     echo "Nessun pacchetto AUR installato (esclusi i pacchetti debug)."
+    log "Nessun pacchetto AUR installato (esclusi debug)."
     exit 0
 fi
 
@@ -45,8 +55,10 @@ done
 
 # Interroga l'AUR API per le versioni disponibili
 AUR_API_URL="https://aur.archlinux.org/rpc/?v=5&type=info${PKG_ARGS}"
+
 AUR_INFO=$(curl -fsSL "$AUR_API_URL") || {
     echo "Errore di rete: impossibile contattare l'AUR."
+    log "ERRORE: impossibile contattare l'AUR."
     exit 2
 }
 
@@ -82,11 +94,13 @@ done
 
 
 # Se non ci sono aggiornamenti, ma ci sono orfani/out-of-date/rimossi, mostra comunque le segnalazioni
+
 if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     if [ ${#REMOVED_LIST[@]} -gt 0 ]; then
         echo -e "\033[1;33m⚠️  Attenzione: alcuni pacchetti risultano rimossi dall'AUR:\033[0m"
         for r in "${REMOVED_LIST[@]}"; do
             echo -e "  🟡 $r"
+            log "RIMOSSO: $r"
         done
         echo ""
     fi
@@ -94,6 +108,7 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         echo -e "\033[1;35m⚠️  Attenzione: pacchetti orfani (Maintainer: None):\033[0m"
         for o in "${ORPHAN_LIST[@]}"; do
             echo -e "  🟣 $o"
+            log "ORFANO: $o"
         done
         echo ""
     fi
@@ -101,9 +116,11 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
         echo -e "\033[1;31m⚠️  Attenzione: pacchetti flaggati come OUT-OF-DATE:\033[0m"
         for o in "${OUTOFDATE_LIST[@]}"; do
             echo -e "  🔴 $o"
+            log "OUT-OF-DATE: $o"
         done
         echo ""
     fi
+    log "Tutti i pacchetti AUR aggiornati."
     echo -e "\033[1;32m✅ Tutti i pacchetti AUR sono aggiornati.\033[0m"
     exit 0
 fi
@@ -116,6 +133,7 @@ if [ ${#UPGRADE_LIST[@]} -gt 0 ]; then
     echo -e "\033[1;36m⬆️  Pacchetti AUR aggiornabili:\033[0m"
     for i in "${!UPGRADE_LIST[@]}"; do
         echo -e "  $((i+1)). ${UPGRADE_LIST[$i]}"
+        log "AGGIORNABILE: ${UPGRADE_LIST[$i]}"
     done
     echo ""
 fi
@@ -167,23 +185,28 @@ fi
 BUILD_DIR="$HOME/aurbuild"
 mkdir -p "$BUILD_DIR"
 
+
 for pkg in "${TO_UPDATE[@]}"; do
     echo -e "\n\033[1;34mAggiornamento di $pkg...\033[0m"
+    log "INIZIO aggiornamento di $pkg"
     cd "$BUILD_DIR"
     if [ -d "$pkg" ]; then
-        cd "$pkg" && git pull || { echo "Impossibile aggiornare repo $pkg"; continue; }
+        cd "$pkg" && git pull || { echo "Impossibile aggiornare repo $pkg"; log "ERRORE: git pull fallito per $pkg"; continue; }
     else
-        git clone "https://aur.archlinux.org/$pkg.git" || { echo "Clonazione fallita per $pkg"; continue; }
+        git clone "https://aur.archlinux.org/$pkg.git" || { echo "Clonazione fallita per $pkg"; log "ERRORE: clonazione fallita per $pkg"; continue; }
         cd "$pkg"
     fi
     # makepkg va eseguito come utente normale, pacman chiederà sudo se necessario
     if makepkg -si --noconfirm; then
+        log "SUCCESSO: $pkg aggiornato e installato."
         cd "$BUILD_DIR"
         rm -rf "$pkg"
     else
         echo "Errore durante la compilazione/installazione di $pkg."
+        log "ERRORE: makepkg/install fallito per $pkg"
         cd "$BUILD_DIR"
     fi
 done
 
+log "Aggiornamento completato."
 echo -e "\n\033[1;32mAggiornamento completato.\033[0m"
