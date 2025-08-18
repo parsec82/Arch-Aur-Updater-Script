@@ -28,34 +28,34 @@ for arg in "$@"; do
 done
 
 if [ "$SHOW_HELP" = "1" ]; then
-        cat <<EOF
-Script aggiornamento pacchetti AUR senza yay/paru (v$SCRIPT_VERSION)
+    cat <<EOF
+AUR package update script without yay/paru (v$SCRIPT_VERSION)
 -------------------------------------------------------------
-USO:
+USAGE:
     ./update-aur.sh [--check] [--all] [--help]
 
-OPZIONI:
-    --check     Mostra solo lo stato dei pacchetti AUR (aggiornabili, orfani, out-of-date, rimossi, dipendenze mancanti) senza prompt di aggiornamento.
-    --all       Aggiorna tutti i pacchetti AUR aggiornabili senza prompt interattivo.
-    --help, -h  Mostra questo help e termina.
+OPTIONS:
+    --check     Show only the status of AUR packages (upgradable, orphaned, out-of-date, removed, missing dependencies) without update prompt.
+    --all       Update all upgradable AUR packages without interactive prompt.
+    --help, -h  Show this help and exit.
 
-FUNZIONALITÀ:
-    - Ignora pacchetti *debug* e quelli elencati in ~/.aurignore
-    - Segnala pacchetti orfani, out-of-date, rimossi, dipendenze AUR mancanti
-    - Log dettagliato in ~/aur-update.log
-    - Notifiche desktop (notify-send)
-    - Pulizia automatica delle directory di build obsolete
-    - Controllo nuova versione script da GitHub
+FEATURES:
+    - Ignores *debug* packages and those listed in ~/.aurignore
+    - Reports orphaned, out-of-date, removed packages, missing AUR dependencies
+    - Detailed log in ~/aur-update.log
+    - Desktop notifications (notify-send)
+    - Automatic cleanup of obsolete build directories
+    - Script version check from GitHub
 
 FILE ~/.aurignore:
-    Elenca (uno per riga) i pacchetti AUR da escludere da controlli/aggiornamenti.
+    List (one per line) AUR packages to exclude from checks/updates.
 
-ESEMPIO:
+EXAMPLES:
     ./update-aur.sh --check
     ./update-aur.sh --all
     ./update-aur.sh
 EOF
-        exit 0
+    exit 0
 fi
 
 #!/bin/bash
