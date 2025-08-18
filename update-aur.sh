@@ -3,6 +3,13 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
+# Funzione notifica desktop (se notify-send disponibile)
+notify() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "$1" "$2"
+    fi
+}
+
 # Parsing flag --check e --all
 CHECK_ONLY=0
 ALL_UPDATE=0
@@ -27,6 +34,7 @@ for dep in curl jq git makepkg pacman; do
     if ! command -v "$dep" >/dev/null 2>&1; then
         echo "Errore: il comando '$dep' non è installato."
         log "ERRORE: dipendenza mancante: $dep"
+        notify "AUR Updater" "Errore: dipendenza mancante: $dep"
         exit 1
     fi
 done
@@ -37,6 +45,7 @@ done
 if [ "$EUID" -eq 0 ]; then
     echo "Non eseguire questo script come root. Usa un utente normale."
     log "ERRORE: esecuzione come root bloccata."
+    notify "AUR Updater" "Errore: esecuzione come root bloccata."
     exit 1
 fi
 
@@ -53,6 +62,7 @@ done
 if [ ${#AUR_PKGS[@]} -eq 0 ]; then
     echo "Nessun pacchetto AUR installato (esclusi i pacchetti debug)."
     log "Nessun pacchetto AUR installato (esclusi debug)."
+    notify "AUR Updater" "Nessun pacchetto AUR installato (esclusi debug)."
     exit 0
 fi
 
@@ -71,6 +81,7 @@ AUR_API_URL="https://aur.archlinux.org/rpc/?v=5&type=info${PKG_ARGS}"
 AUR_INFO=$(curl -fsSL "$AUR_API_URL") || {
     echo "Errore di rete: impossibile contattare l'AUR."
     log "ERRORE: impossibile contattare l'AUR."
+    notify "AUR Updater" "Errore di rete: impossibile contattare l'AUR."
     exit 2
 }
 
@@ -156,11 +167,13 @@ if [ ${#UPGRADE_LIST[@]} -eq 0 ]; then
     fi
     log "Tutti i pacchetti AUR aggiornati."
     echo -e "\033[1;32m✅ Tutti i pacchetti AUR sono aggiornati.\033[0m"
+    notify "AUR Updater" "Tutti i pacchetti AUR sono aggiornati."
     exit 0
 fi
 
 # Se richiesto solo check, mostra stato e termina
 if [ "$CHECK_ONLY" = "1" ]; then
+    notify "AUR Updater" "Check completato: nessun aggiornamento eseguito."
     exit 0
 fi
 
@@ -280,4 +293,5 @@ for pkg in "${TO_UPDATE[@]}"; do
 done
 
 log "Aggiornamento completato."
+notify "AUR Updater" "Aggiornamento completato."
 echo -e "\n\033[1;32mAggiornamento completato.\033[0m"
