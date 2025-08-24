@@ -12,7 +12,7 @@ notify() {
 
 
 
-# Parsing flag --check, --all, --help/-h, --no-color, --compact, --full, --install
+# Parsing flag --check, --all, --help/-h, --no-color, --compact, --full, --install, --remove
 CHECK_ONLY=0
 ALL_UPDATE=0
 SHOW_HELP=0
@@ -20,7 +20,9 @@ NO_COLOR=0
 COMPACT=0
 FULL=0
 INSTALL_MODE=0
+REMOVE_MODE=0
 INSTALL_PKGS=()
+REMOVE_PKGS=()
 ARGS=("$@")
 i=0
 while [ $i -lt $# ]; do
@@ -58,6 +60,20 @@ while [ $i -lt $# ]; do
             done
             i=$((j-1))
             ;;
+        --remove)
+            REMOVE_MODE=1
+            # Prendi tutti gli argomenti successivi che non iniziano con --
+            j=$((i+1))
+            while [ $j -lt $# ]; do
+                next="${ARGS[$j]}"
+                if [[ "$next" == --* ]]; then
+                    break
+                fi
+                REMOVE_PKGS+=("$next")
+                j=$((j+1))
+            done
+            i=$((j-1))
+            ;;
     esac
     i=$((i+1))
 done
@@ -68,7 +84,7 @@ if [ "$SHOW_HELP" = "1" ]; then
 AUR package update script without yay/paru (v$SCRIPT_VERSION)
 -------------------------------------------------------------
 USAGE:
-    ./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--install <pkg1> [<pkg2> ...]] [--help]
+    ./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--install <pkg1> [<pkg2> ...]] [--remove <pkg1> [<pkg2> ...]] [--help]
 
 OPTIONS:
     --check      Show only the status of AUR packages (upgradable, orphaned, out-of-date, removed, missing dependencies) without update prompt.
@@ -77,6 +93,7 @@ OPTIONS:
     --compact    Compact output (one line per package, minimal info).
     --full       Full output (detailed info, default).
     --install    Install one or more AUR packages (space separated).
+    --remove     Remove one or more AUR packages (space separated).
     --help, -h   Show this help and exit.
 
 FEATURES:
@@ -94,7 +111,34 @@ EXAMPLES:
     ./update-aur.sh --check --compact
     ./update-aur.sh --all --no-color
     ./update-aur.sh --install google-chrome visual-studio-code-bin
+    ./update-aur.sh --remove google-chrome visual-studio-code-bin
 EOF
+    exit 0
+fi
+# Remove mode: uninstall AUR packages
+if [ "$REMOVE_MODE" = "1" ]; then
+    if [ ${#REMOVE_PKGS[@]} -eq 0 ]; then
+        echo "No package specified for removal."
+        exit 1
+    fi
+    for pkg in "${REMOVE_PKGS[@]}"; do
+        if ! pacman -Qq "$pkg" &>/dev/null; then
+            echo "Package $pkg is not installed. Skipping."
+            log "REMOVE: $pkg not installed."
+            continue
+        fi
+        echo -e "${BOLD}Removing $pkg...${NC}"
+        log "REMOVE: start $pkg"
+        if sudo pacman -Rns --noconfirm "$pkg"; then
+            log "REMOVE: $pkg removed successfully."
+            echo "Package $pkg removed successfully."
+        else
+            echo "Error removing $pkg."
+            log "ERROR: failed to remove $pkg"
+        fi
+    done
+    notify "AUR Updater" "AUR package removal completed."
+    echo -e "${GREEN}AUR package removal completed.${NC}"
     exit 0
 fi
 # Install mode: install new AUR packages
