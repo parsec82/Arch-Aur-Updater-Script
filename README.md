@@ -13,7 +13,7 @@
 ## English
 
 
-**Version: 3.5**
+**Version: 3.6**
 
 Bash script for Arch Linux to:
 - Check for updates of installed AUR packages
@@ -69,7 +69,7 @@ List (one per line) AUR packages to exclude from checks/updates.
 ## Italiano
 
 
-**Versione: 3.5**
+**Versione: 3.6**
 
 Script per Arch Linux che:
 - Controlla aggiornamenti dei pacchetti AUR installati

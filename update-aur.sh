@@ -186,7 +186,7 @@ fi
 
 
 # === VERSIONE SCRIPT ===
-SCRIPT_VERSION="3.5"
+SCRIPT_VERSION="3.6"
 
 # Script update check from GitHub
 GITHUB_REPO="parsec82/Arch-Aur-Updater-Script"
