@@ -26,24 +26,24 @@ Bash script for Arch Linux to:
 - Desktop notification at end or on error (notify-send)
 - Automatically cleans up obsolete build directories
 - Checks for new script version on GitHub
-- Supports `--check`, `--all`, `--no-color`, `--compact`, `--full`, `--install`, `--remove`, `--help/-h` flags
+- Supports `--check`/`-c`, `--all`/`-a`, `--no-color`/`-n`, `--compact`/`-C`, `--full`/`-F`, `--install`/`-i`, `--remove`/`-r`, `--help`/`-h` flags
 - Handles pacman lock file: aborts if `/var/lib/pacman/db.lck` exists
 - All output, prompts and notifications are in English
 
 ### Usage
 
 ```bash
-./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--install <pkg1> [<pkg2> ...]] [--remove <pkg1> [<pkg2> ...]] [--help]
+./update-aur.sh [--check|-c] [--all|-a] [--no-color|-n] [--compact|-C|--full|-F] [--install|-i <pkg1> [<pkg2> ...]] [--remove|-r <pkg1> [<pkg2> ...]] [--help|-h]
 ```
 
-- `--check`      : Only show AUR package status, no update prompt
-- `--all`        : Update all upgradable AUR packages without prompt
-- `--no-color`   : Disable colored output
-- `--compact`    : Compact output (one line per package, minimal info)
-- `--full`       : Full output (detailed info, default)
-- `--install`    : Install one or more AUR packages (space separated)
-- `--remove`     : Remove one or more AUR packages (space separated)
-- `--help/-h`    : Show help and exit
+- `--check`, `-c`      : Only show AUR package status, no update prompt
+- `--all`, `-a`        : Update all upgradable AUR packages without prompt
+- `--no-color`, `-n`   : Disable colored output
+- `--compact`, `-C`    : Compact output (one line per package, minimal info)
+- `--full`, `-F`       : Full output (detailed info, default)
+- `--install`, `-i`    : Install one or more AUR packages (space separated)
+- `--remove`, `-r`     : Remove one or more AUR packages (space separated)
+- `--help`, `-h`       : Show help and exit
 
 ### File ~/.aurignore
 List (one per line) AUR packages to exclude from checks/updates.
@@ -51,10 +51,15 @@ List (one per line) AUR packages to exclude from checks/updates.
 ### Examples
 ```bash
 ./update-aur.sh --check --compact
+./update-aur.sh -c -C
 ./update-aur.sh --all --no-color
+./update-aur.sh -a -n
 ./update-aur.sh --full
+./update-aur.sh -F
 ./update-aur.sh --install google-chrome visual-studio-code-bin
+./update-aur.sh -i google-chrome visual-studio-code-bin
 ./update-aur.sh --remove google-chrome visual-studio-code-bin
+./update-aur.sh -r google-chrome visual-studio-code-bin
 ```
 
 ---
@@ -77,24 +82,24 @@ Script per Arch Linux che:
 - Notifica a fine aggiornamento o errore (notify-send)
 - Pulisce automaticamente le directory di build obsolete
 - Controlla se esiste una nuova versione dello script su GitHub
-- Supporta i flag `--check`, `--all`, `--no-color`, `--compact`, `--full`, `--install`, `--remove`, `--help/-h`
+- Supporta i flag `--check`/`-c`, `--all`/`-a`, `--no-color`/`-n`, `--compact`/`-C`, `--full`/`-F`, `--install`/`-i`, `--remove`/`-r`, `--help`/`-h`
 - Gestisce il lock file di pacman: termina se `/var/lib/pacman/db.lck` esiste
 - Tutto l'output, i prompt e le notifiche sono ora in inglese
 
 ### Uso
 
 ```bash
-./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--install <pkg1> [<pkg2> ...]] [--remove <pkg1> [<pkg2> ...]] [--help]
+./update-aur.sh [--check|-c] [--all|-a] [--no-color|-n] [--compact|-C|--full|-F] [--install|-i <pkg1> [<pkg2> ...]] [--remove|-r <pkg1> [<pkg2> ...]] [--help|-h]
 ```
 
-- `--check`      : Mostra solo lo stato dei pacchetti AUR senza prompt di aggiornamento
-- `--all`        : Aggiorna tutti i pacchetti AUR aggiornabili senza prompt
-- `--no-color`   : Disabilita l'output colorato
-- `--compact`    : Output compatto (una riga per pacchetto, info minima)
-- `--full`       : Output esteso (dettagliato, default)
-- `--install`    : Installa uno o più pacchetti AUR (separati da spazio)
-- `--remove`     : Rimuove uno o più pacchetti AUR (separati da spazio)
-- `--help/-h`    : Mostra l'help e termina
+- `--check`, `-c`      : Mostra solo lo stato dei pacchetti AUR senza prompt di aggiornamento
+- `--all`, `-a`        : Aggiorna tutti i pacchetti AUR aggiornabili senza prompt
+- `--no-color`, `-n`   : Disabilita l'output colorato
+- `--compact`, `-C`    : Output compatto (una riga per pacchetto, info minima)
+- `--full`, `-F`       : Output esteso (dettagliato, default)
+- `--install`, `-i`    : Installa uno o più pacchetti AUR (separati da spazio)
+- `--remove`, `-r`     : Rimuove uno o più pacchetti AUR (separati da spazio)
+- `--help`, `-h`       : Mostra l'help e termina
 
 ### File ~/.aurignore
 Elenca (uno per riga) i pacchetti AUR da escludere da controlli/aggiornamenti.
@@ -102,10 +107,15 @@ Elenca (uno per riga) i pacchetti AUR da escludere da controlli/aggiornamenti.
 ### Esempi
 ```bash
 ./update-aur.sh --check --compact
+./update-aur.sh -c -C
 ./update-aur.sh --all --no-color
+./update-aur.sh -a -n
 ./update-aur.sh --full
+./update-aur.sh -F
 ./update-aur.sh --install google-chrome visual-studio-code-bin
+./update-aur.sh -i google-chrome visual-studio-code-bin
 ./update-aur.sh --remove google-chrome visual-studio-code-bin
+./update-aur.sh -r google-chrome visual-studio-code-bin
 ```
 
 ---

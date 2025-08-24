@@ -12,7 +12,7 @@ notify() {
 
 
 
-# Parsing flag --check, --all, --help/-h, --no-color, --compact, --full, --install, --remove
+# Parsing flag lunghi e brevi
 CHECK_ONLY=0
 ALL_UPDATE=0
 SHOW_HELP=0
@@ -28,31 +28,31 @@ i=0
 while [ $i -lt $# ]; do
     arg="${ARGS[$i]}"
     case "$arg" in
-        --check)
+        --check|-c)
             CHECK_ONLY=1
             ;;
-        --all)
+        --all|-a)
             ALL_UPDATE=1
             ;;
         --help|-h)
             SHOW_HELP=1
             ;;
-        --no-color)
+        --no-color|-n)
             NO_COLOR=1
             ;;
-        --compact)
+        --compact|-C)
             COMPACT=1
             ;;
-        --full)
+        --full|-F)
             FULL=1
             ;;
-        --install)
+        --install|-i)
             INSTALL_MODE=1
-            # Prendi tutti gli argomenti successivi che non iniziano con --
+            # Prendi tutti gli argomenti successivi che non iniziano con -
             j=$((i+1))
             while [ $j -lt $# ]; do
                 next="${ARGS[$j]}"
-                if [[ "$next" == --* ]]; then
+                if [[ "$next" == --* || "$next" == -* ]]; then
                     break
                 fi
                 INSTALL_PKGS+=("$next")
@@ -60,13 +60,13 @@ while [ $i -lt $# ]; do
             done
             i=$((j-1))
             ;;
-        --remove)
+        --remove|-r)
             REMOVE_MODE=1
-            # Prendi tutti gli argomenti successivi che non iniziano con --
+            # Prendi tutti gli argomenti successivi che non iniziano con -
             j=$((i+1))
             while [ $j -lt $# ]; do
                 next="${ARGS[$j]}"
-                if [[ "$next" == --* ]]; then
+                if [[ "$next" == --* || "$next" == -* ]]; then
                     break
                 fi
                 REMOVE_PKGS+=("$next")
