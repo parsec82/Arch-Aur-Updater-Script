@@ -117,6 +117,9 @@ EOF
 fi
 # Remove mode: uninstall AUR packages
 if [ "$REMOVE_MODE" = "1" ]; then
+    if [ "$COMPACT" != "1" ]; then
+        echo -e "${CYAN}==> Starting AUR package removal...${NC}"
+    fi
     if [ ${#REMOVE_PKGS[@]} -eq 0 ]; then
         echo "No package specified for removal."
         exit 1
@@ -127,7 +130,9 @@ if [ "$REMOVE_MODE" = "1" ]; then
             log "REMOVE: $pkg not installed."
             continue
         fi
-        echo -e "${BOLD}Removing $pkg...${NC}"
+        if [ "$COMPACT" != "1" ]; then
+            echo -e "${BOLD}Removing $pkg...${NC}"
+        fi
         log "REMOVE: start $pkg"
         if sudo pacman -Rns --noconfirm "$pkg"; then
             log "REMOVE: $pkg removed successfully."
@@ -138,11 +143,16 @@ if [ "$REMOVE_MODE" = "1" ]; then
         fi
     done
     notify "AUR Updater" "AUR package removal completed."
-    echo -e "${GREEN}AUR package removal completed.${NC}"
+    if [ "$COMPACT" != "1" ]; then
+        echo -e "${GREEN}AUR package removal completed.${NC}"
+    fi
     exit 0
 fi
 # Install mode: install new AUR packages
 if [ "$INSTALL_MODE" = "1" ]; then
+    if [ "$COMPACT" != "1" ]; then
+        echo -e "${CYAN}==> Starting AUR package installation...${NC}"
+    fi
     if [ ${#INSTALL_PKGS[@]} -eq 0 ]; then
         echo "No package specified for installation."
         exit 1
@@ -155,7 +165,9 @@ if [ "$INSTALL_MODE" = "1" ]; then
             log "INSTALL: $pkg already installed."
             continue
         fi
-        echo -e "${BOLD}Installing $pkg from AUR...${NC}"
+        if [ "$COMPACT" != "1" ]; then
+            echo -e "${BOLD}Installing $pkg from AUR...${NC}"
+        fi
         log "INSTALL: start $pkg"
         cd "$BUILD_DIR"
         if [ -d "$pkg" ]; then
@@ -176,7 +188,9 @@ if [ "$INSTALL_MODE" = "1" ]; then
         fi
     done
     notify "AUR Updater" "AUR package installation completed."
-    echo -e "${GREEN}AUR package installation completed.${NC}"
+    if [ "$COMPACT" != "1" ]; then
+        echo -e "${GREEN}AUR package installation completed.${NC}"
+    fi
     exit 0
 fi
 
@@ -187,6 +201,17 @@ fi
 
 # === VERSIONE SCRIPT ===
 SCRIPT_VERSION="3.6"
+
+# Messaggio di stato all'avvio
+if [ "$COMPACT" != "1" ]; then
+    if [ "$CHECK_ONLY" = "1" ]; then
+        echo -e "${CYAN}==> Checking AUR packages (status only)...${NC}"
+    elif [ "$ALL_UPDATE" = "1" ]; then
+        echo -e "${CYAN}==> Checking and updating all AUR packages...${NC}"
+    else
+        echo -e "${CYAN}==> Checking AUR packages...${NC}"
+    fi
+fi
 
 # Script update check from GitHub
 GITHUB_REPO="parsec82/Arch-Aur-Updater-Script"
@@ -528,8 +553,11 @@ done
 
 
 
+
 for pkg in "${TO_UPDATE[@]}"; do
-    echo -e "\n${BOLD}Updating $pkg...${NC}"
+    if [ "$COMPACT" != "1" ]; then
+        echo -e "\n${BOLD}Updating $pkg...${NC}"
+    fi
     log "START updating $pkg"
     cd "$BUILD_DIR"
     if [ -d "$pkg" ]; then
@@ -543,6 +571,7 @@ for pkg in "${TO_UPDATE[@]}"; do
         log "SUCCESS: $pkg updated and installed."
         cd "$BUILD_DIR"
         rm -rf "$pkg"
+        echo "Package $pkg updated successfully."
     else
         echo "Error during build/install of $pkg."
         log "ERROR: makepkg/install failed for $pkg"
@@ -553,4 +582,6 @@ done
 
 log "Update completed."
 notify "AUR Updater" "Update completed."
-echo -e "\n${GREEN}Update completed.${NC}"
+if [ "$COMPACT" != "1" ]; then
+    echo -e "\n${GREEN}Update completed.${NC}"
+fi
