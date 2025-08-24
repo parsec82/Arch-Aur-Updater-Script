@@ -12,14 +12,19 @@ notify() {
 
 
 
-# Parsing flag --check, --all, --help/-h, --no-color, --compact, --full
+# Parsing flag --check, --all, --help/-h, --no-color, --compact, --full, --install
 CHECK_ONLY=0
 ALL_UPDATE=0
 SHOW_HELP=0
 NO_COLOR=0
 COMPACT=0
 FULL=0
-for arg in "$@"; do
+INSTALL_MODE=0
+INSTALL_PKGS=()
+ARGS=("$@")
+i=0
+while [ $i -lt $# ]; do
+    arg="${ARGS[$i]}"
     case "$arg" in
         --check)
             CHECK_ONLY=1
@@ -39,7 +44,22 @@ for arg in "$@"; do
         --full)
             FULL=1
             ;;
+        --install)
+            INSTALL_MODE=1
+            # Prendi tutti gli argomenti successivi che non iniziano con --
+            j=$((i+1))
+            while [ $j -lt $# ]; do
+                next="${ARGS[$j]}"
+                if [[ "$next" == --* ]]; then
+                    break
+                fi
+                INSTALL_PKGS+=("$next")
+                j=$((j+1))
+            done
+            i=$((j-1))
+            ;;
     esac
+    i=$((i+1))
 done
 
 
@@ -48,7 +68,7 @@ if [ "$SHOW_HELP" = "1" ]; then
 AUR package update script without yay/paru (v$SCRIPT_VERSION)
 -------------------------------------------------------------
 USAGE:
-    ./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--help]
+    ./update-aur.sh [--check] [--all] [--no-color] [--compact|--full] [--install <pkg1> [<pkg2> ...]] [--help]
 
 OPTIONS:
     --check      Show only the status of AUR packages (upgradable, orphaned, out-of-date, removed, missing dependencies) without update prompt.
@@ -56,6 +76,7 @@ OPTIONS:
     --no-color   Disable colored output.
     --compact    Compact output (one line per package, minimal info).
     --full       Full output (detailed info, default).
+    --install    Install one or more AUR packages (space separated).
     --help, -h   Show this help and exit.
 
 FEATURES:
@@ -72,8 +93,46 @@ FILE ~/.aurignore:
 EXAMPLES:
     ./update-aur.sh --check --compact
     ./update-aur.sh --all --no-color
-    ./update-aur.sh --full
+    ./update-aur.sh --install google-chrome visual-studio-code-bin
 EOF
+    exit 0
+fi
+# Install mode: install new AUR packages
+if [ "$INSTALL_MODE" = "1" ]; then
+    if [ ${#INSTALL_PKGS[@]} -eq 0 ]; then
+        echo "No package specified for installation."
+        exit 1
+    fi
+    BUILD_DIR="$HOME/aurbuild"
+    mkdir -p "$BUILD_DIR"
+    for pkg in "${INSTALL_PKGS[@]}"; do
+        if pacman -Qq "$pkg" &>/dev/null; then
+            echo "Package $pkg is already installed. Skipping."
+            log "INSTALL: $pkg already installed."
+            continue
+        fi
+        echo -e "${BOLD}Installing $pkg from AUR...${NC}"
+        log "INSTALL: start $pkg"
+        cd "$BUILD_DIR"
+        if [ -d "$pkg" ]; then
+            cd "$pkg" && git pull || { echo "Unable to update repo $pkg"; log "ERROR: git pull failed for $pkg"; continue; }
+        else
+            git clone "https://aur.archlinux.org/$pkg.git" || { echo "Clone failed for $pkg"; log "ERROR: clone failed for $pkg"; continue; }
+            cd "$pkg"
+        fi
+        if makepkg -si --noconfirm; then
+            log "INSTALL: $pkg installed successfully."
+            cd "$BUILD_DIR"
+            rm -rf "$pkg"
+            echo "Package $pkg installed successfully."
+        else
+            echo "Error during build/install of $pkg."
+            log "ERROR: makepkg/install failed for $pkg"
+            cd "$BUILD_DIR"
+        fi
+    done
+    notify "AUR Updater" "AUR package installation completed."
+    echo -e "${GREEN}AUR package installation completed.${NC}"
     exit 0
 fi
 
